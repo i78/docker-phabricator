@@ -1,0 +1,41 @@
+version: '2'
+
+volumes:
+  phabricator:
+  repositories:
+  db:
+
+services:
+  db:
+    image: mysql:5.7
+    restart: always
+    labels:
+      - "traefik.enable=false"
+    volumes:
+      - db:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=phabricator
+      - MYSQL_PASSWORD=phabricator
+      - MYSQL_DATABASE=phabricator
+      - MYSQL_USER=phabricator
+    command: mysqld --character-set-server=utf8 --collation-server=utf8_unicode_ci --max_allowed_packet=64M --sql-mode="STRICT_ALL_TABLES"
+
+  phabricator:
+    image: codecyclist/phabricator
+    hostname: phabricator
+    restart: always
+    labels:
+      - "traefik.service=phabricator"
+      - "traefik.frontend.rule=Host:phabricator.localhost"
+    depends_on:
+      - db
+    environment:
+      - PHABRICATOR_HOSTNAME=localhost
+      - PHABRICATOR_BASE_URL=https://phabricator.localhost
+    links:
+      - db
+    volumes:
+      - phabricator:/opt/phabricator
+      - repositories:/var/repo
+      - ./backup:/backup
+    restart: always
